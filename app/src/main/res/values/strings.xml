@@ -1,0 +1,59 @@
+<resources>
+    <string name="app_name">My Tasks</string>
+
+    <!-- Task List Screen -->
+    <string name="active_tasks">%d active tasks</string>
+    <string name="clear_completed">Clear Completed</string>
+    <string name="no_tasks_yet">No tasks yet</string>
+    <string name="add_first_task">Add your first task to get started</string>
+    <string name="no_active_tasks">No active tasks</string>
+    <string name="all_tasks_completed">All tasks are completed!</string>
+    <string name="no_completed_tasks">No completed tasks</string>
+    <string name="complete_tasks_to_see">Complete some tasks to see them here</string>
+
+    <!-- Add/Edit Task Screen -->
+    <string name="add_task">Add Task</string>
+    <string name="edit_task">Edit Task</string>
+    <string name="task_title">Task Title</string>
+    <string name="enter_task_title">Enter task title...</string>
+    <string name="description">Description</string>
+    <string name="enter_task_description">Enter task description...</string>
+    <string name="due_date">Due Date</string>
+    <string name="priority">Priority</string>
+    <string name="save">Save</string>
+    <string name="update">Update</string>
+
+    <!-- Priority Levels -->
+    <string name="priority_low">Low</string>
+    <string name="priority_medium">Medium</string>
+    <string name="priority_high">High</string>
+    <string name="priority_urgent">Urgent</string>
+
+    <!-- Filter Options -->
+    <string name="filter_all">All Tasks</string>
+    <string name="filter_active">Active</string>
+    <string name="filter_completed">Completed</string>
+
+    <!-- Actions -->
+    <string name="delete_task">Delete Task</string>
+    <string name="edit_task_action">Edit Task</string>
+    <string name="mark_complete">Mark as Complete</string>
+    <string name="mark_incomplete">Mark as Incomplete</string>
+
+    <!-- Dialog Messages -->
+    <string name="delete_task_confirmation">Are you sure you want to delete "%s"?</string>
+    <string name="clear_completed_confirmation">Are you sure you want to delete all completed tasks? This action cannot be undone.</string>
+    <string name="delete">Delete</string>
+    <string name="delete_all">Delete All</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+
+    <!-- Content Descriptions -->
+    <string name="back">Back</string>
+    <string name="add_task_fab">Add Task</string>
+    <string name="date_icon">Date</string>
+    <string name="select_date">Select Date</string>
+
+    <!-- Date Format -->
+    <string name="date_format">MMM dd, yyyy</string>
+</resources>
