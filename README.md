@@ -86,4 +86,4 @@ It features a beautiful dark, space-themed UI and helps you stay productive by a
 
 ---
 
-Made with 💜 Kotlin & Compose magic by Laiba [https://github.com/Laiba-Usman]
+Made with Kotlin & Compose magic by Laiba [https://github.com/Laiba-Usman]
