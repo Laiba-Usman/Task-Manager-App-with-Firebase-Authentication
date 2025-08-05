@@ -1,9 +1,11 @@
 package com.example.mytasks.di
 
 import android.content.Context
-import androidx.room.Room
-import com.example.mytasks.data.dao.TaskDao
-import com.example.mytasks.data.database.TaskDatabase
+import com.example.mytasks.data.datastore.UserPreferencesRepository
+import com.example.mytasks.repository.AuthRepository
+import com.example.mytasks.repository.FirebaseTaskRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,18 +19,39 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideTaskDatabase(@ApplicationContext context: Context): TaskDatabase {
-        return Room.databaseBuilder(
-            context.applicationContext,
-            TaskDatabase::class.java,
-            "task_database"
-        )
-            .fallbackToDestructiveMigration()
-            .build()
+    fun provideFirebaseAuth(): FirebaseAuth {
+        return FirebaseAuth.getInstance()
     }
 
     @Provides
-    fun provideTaskDao(database: TaskDatabase): TaskDao {
-        return database.taskDao()
+    @Singleton
+    fun provideFirebaseDatabase(): FirebaseDatabase {
+        return FirebaseDatabase.getInstance()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAuthRepository(
+        auth: FirebaseAuth,
+        database: FirebaseDatabase
+    ): AuthRepository {
+        return AuthRepository(auth, database)
+    }
+
+    @Provides
+    @Singleton
+    fun provideFirebaseTaskRepository(
+        auth: FirebaseAuth,
+        database: FirebaseDatabase
+    ): FirebaseTaskRepository {
+        return FirebaseTaskRepository(auth, database)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUserPreferencesRepository(
+        @ApplicationContext context: Context
+    ): UserPreferencesRepository {
+        return UserPreferencesRepository(context)
     }
 }

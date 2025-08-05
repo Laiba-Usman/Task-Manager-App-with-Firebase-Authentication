@@ -1,12 +1,22 @@
 package com.example.mytasks
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.AssignmentTurnedIn
+import androidx.compose.material.icons.filled.TaskAlt
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.mytasks.ui.components.TaskItem
+import com.example.mytasks.viewmodel.AuthEvent
+import com.example.mytasks.viewmodel.AuthViewModel
 import com.example.mytasks.viewmodel.TaskEvent
 import com.example.mytasks.viewmodel.TaskFilter
 import com.example.mytasks.viewmodel.TaskViewModel
@@ -25,182 +37,135 @@ import com.example.mytasks.ui.theme.*
 @Composable
 fun TaskListScreen(
     viewModel: TaskViewModel,
+    authViewModel: AuthViewModel,
     onNavigateToAddTask: () -> Unit,
-    onNavigateToEditTask: (Int) -> Unit
+    onNavigateToEditTask: (String) -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val allTasks by viewModel.allTasks.collectAsStateWithLifecycle()
     val activeTasks by viewModel.activeTasks.collectAsStateWithLifecycle()
     val completedTasks by viewModel.completedTasks.collectAsStateWithLifecycle()
     val activeTasksCount by viewModel.activeTasksCount.collectAsStateWithLifecycle()
+    val userName by authViewModel.userName.collectAsStateWithLifecycle()
 
-    val currentTasks = when (uiState.currentFilter) {
+    var showClearCompletedDialog by remember { mutableStateOf(false) }
+
+    val tasksToShow = when (uiState.currentFilter) {
         TaskFilter.ALL -> allTasks
         TaskFilter.ACTIVE -> activeTasks
         TaskFilter.COMPLETED -> completedTasks
     }
 
-    var showDeleteAllDialog by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        SpaceBlack,
-                        SpaceGray.copy(alpha = 0.3f)
-                    )
-                )
-            )
-    ) {
-        // Top App Bar
-        TopAppBar(
-            title = {
-                Column {
-                    Text(
-                        text = "My Tasks",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "$activeTasksCount active tasks",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            actions = {
-                if (completedTasks.isNotEmpty()) {
-                    IconButton(
-                        onClick = { showDeleteAllDialog = true }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = "Clear Completed",
-                            tint = MaterialTheme.colorScheme.error
-                        )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(text = "My Tasks") },
+                actions = {
+                    IconButton(onClick = { authViewModel.onEvent(AuthEvent.Logout) }) {
+                        Icon(Icons.Default.Logout, contentDescription = "Logout")
                     }
                 }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = SpaceBlack.copy(alpha = 0.95f)
             )
-        )
-
-        // Filter Chips
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(TaskFilter.entries) { filter ->
-                FilterChip(
-                    selected = uiState.currentFilter == filter,
-                    onClick = { viewModel.onEvent(TaskEvent.SetFilter(filter)) },
-                    label = {
-                        Text(
-                            text = when (filter) {
-                                TaskFilter.ALL -> "${filter.displayName} (${allTasks.size})"
-                                TaskFilter.ACTIVE -> "${filter.displayName} (${activeTasks.size})"
-                                TaskFilter.COMPLETED -> "${filter.displayName} (${completedTasks.size})"
-                            }
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = when (filter) {
-                                TaskFilter.ALL -> Icons.Default.List
-                                TaskFilter.ACTIVE -> Icons.Default.Circle
-                                TaskFilter.COMPLETED -> Icons.Default.CheckCircle
-                            },
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = SpaceBlueLight,
-                        selectedLabelColor = SpaceWhite
-                    )
-                )
-            }
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onNavigateToAddTask,
+                icon = { Icon(Icons.Default.Add, contentDescription = "Add Task") },
+                text = { Text("Add Task") },
+                containerColor = MaterialTheme.colorScheme.tertiary,
+                contentColor = MaterialTheme.colorScheme.onTertiary
+            )
         }
-
-        // Task List
-        Box(
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .weight(1f)
-        ) {
-            if (currentTasks.isEmpty()) {
-                EmptyState(
-                    filter = uiState.currentFilter,
-                    modifier = Modifier.align(Alignment.Center)
+                .padding(innerPadding)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(SpaceGray, SpaceBlack)
+                    )
                 )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(currentTasks) { task ->
-                        TaskItem(
-                            task = task,
-                            onToggleComplete = { id, isCompleted ->
-                                viewModel.onEvent(TaskEvent.ToggleTaskCompletion(id, isCompleted))
-                            },
-                            onEdit = onNavigateToEditTask,
-                            onDelete = { taskToDelete ->
-                                viewModel.onEvent(TaskEvent.DeleteTask(taskToDelete))
-                            }
-                        )
-                    }
+        ) {
+            HeaderSection(
+                userName = userName,
+                activeTasksCount = activeTasksCount,
+                onClearCompleted = { showClearCompletedDialog = true }
+            )
 
-                    // Bottom spacing for FAB
-                    item {
-                        Spacer(modifier = Modifier.height(80.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            FilterChips(
+                currentFilter = uiState.currentFilter,
+                onFilterChange = { viewModel.onEvent(TaskEvent.SetFilter(it)) }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            AnimatedContent(
+                targetState = tasksToShow.isEmpty(),
+                modifier = Modifier.fillMaxSize(),
+                transitionSpec = {
+                    slideInVertically { height -> height } + fadeIn() togetherWith
+                            slideOutVertically { height -> -height } + fadeOut()
+                },
+                label = "TaskListContent"
+            ) { isEmpty ->
+                if (isEmpty) {
+                    EmptyListPlaceholder(
+                        filter = uiState.currentFilter,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 24.dp)
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        contentPadding = PaddingValues(bottom = 80.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(tasksToShow, key = { it.idString ?: "" }) { task ->
+                            TaskItem(
+                                task = task,
+                                onToggleComplete = { id, isCompleted ->
+                                    viewModel.onEvent(TaskEvent.ToggleTaskCompletion(id, isCompleted))
+                                },
+                                onEdit = { taskId -> onNavigateToEditTask(taskId) },
+                                onDelete = { viewModel.onEvent(TaskEvent.DeleteTask(it)) }
+                            )
+                        }
                     }
                 }
-            }
-
-            // Floating Action Button
-            FloatingActionButton(
-                onClick = onNavigateToAddTask,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp),
-                containerColor = SpaceBlueLight,
-                contentColor = SpaceWhite
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Task"
-                )
             }
         }
     }
 
-    // Delete All Dialog
-    if (showDeleteAllDialog) {
+    if (showClearCompletedDialog) {
         AlertDialog(
-            onDismissRequest = { showDeleteAllDialog = false },
-            title = { Text("Clear Completed Tasks") },
-            text = { Text("Are you sure you want to delete all completed tasks? This action cannot be undone.") },
+            onDismissRequest = { showClearCompletedDialog = false },
+            title = {
+                Text("Clear Completed Tasks")
+            },
+            text = {
+                Text("Are you sure you want to delete all completed tasks? This action cannot be undone.")
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.onEvent(TaskEvent.DeleteCompletedTasks)
-                        showDeleteAllDialog = false
+                        viewModel.onEvent(TaskEvent.ClearCompleted)
+                        showClearCompletedDialog = false
                     }
                 ) {
                     Text("Delete All", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteAllDialog = false }) {
+                TextButton(
+                    onClick = { showClearCompletedDialog = false }
+                ) {
                     Text("Cancel")
                 }
             }
@@ -209,13 +174,96 @@ fun TaskListScreen(
 }
 
 @Composable
-fun EmptyState(
+fun HeaderSection(
+    userName: String,
+    activeTasksCount: Int,
+    onClearCompleted: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = "Hello $userName",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = SpaceWhite
+            )
+            Text(
+                text = "$activeTasksCount active tasks",
+                style = MaterialTheme.typography.bodyMedium,
+                color = SpaceWhite.copy(alpha = 0.7f)
+            )
+        }
+        TextButton(onClick = onClearCompleted) {
+            Text(
+                text = "Clear Completed",
+                color = SpaceBlueLight
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterChips(
+    currentFilter: TaskFilter,
+    onFilterChange: (TaskFilter) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(TaskFilter.values()) { filter ->
+            FilterChip(
+                selected = currentFilter == filter,
+                onClick = { onFilterChange(filter) },
+                label = {
+                    Text(
+                        text = when (filter) {
+                            TaskFilter.ALL -> "All Tasks"
+                            TaskFilter.ACTIVE -> "Active"
+                            TaskFilter.COMPLETED -> "Completed"
+                        }
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = when (filter) {
+                            TaskFilter.ALL -> Icons.Default.Inbox
+                            TaskFilter.ACTIVE -> Icons.Default.AssignmentTurnedIn
+                            TaskFilter.COMPLETED -> Icons.Default.TaskAlt
+                        },
+                        contentDescription = null
+                    )
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = SpaceBlueLight.copy(alpha = 0.2f),
+                    selectedLabelColor = SpaceBlueLight,
+                    selectedLeadingIconColor = SpaceBlueLight
+                )
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyListPlaceholder(
     filter: TaskFilter,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Icon(
             imageVector = when (filter) {

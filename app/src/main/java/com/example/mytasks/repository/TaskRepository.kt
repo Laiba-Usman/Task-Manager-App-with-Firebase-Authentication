@@ -17,7 +17,8 @@ class TaskRepository @Inject constructor(
 
     fun getCompletedTasks(): Flow<List<Task>> = taskDao.getCompletedTasks()
 
-    suspend fun getTaskById(id: Int): Task? = taskDao.getTaskById(id)
+    // 🔄 Changed from Int to String
+    suspend fun getTaskById(id: String): Task? = taskDao.getTaskById(id)
 
     suspend fun insertTask(task: Task): Long = taskDao.insertTask(task)
 
@@ -25,7 +26,8 @@ class TaskRepository @Inject constructor(
 
     suspend fun deleteTask(task: Task) = taskDao.deleteTask(task)
 
-    suspend fun updateTaskCompletion(id: Int, isCompleted: Boolean) =
+    // 🔄 Changed from Int to String
+    suspend fun updateTaskCompletion(id: String, isCompleted: Boolean) =
         taskDao.updateTaskCompletion(id, isCompleted)
 
     suspend fun deleteCompletedTasks() = taskDao.deleteCompletedTasks()

@@ -1,11 +1,15 @@
 package com.example.mytasks
 
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,7 +18,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.mytasks.data.entity.TaskPriority
 import com.example.mytasks.ui.theme.*
 import com.example.mytasks.viewmodel.TaskViewModel
@@ -26,7 +29,7 @@ import java.util.*
 @Composable
 fun AddEditTaskScreen(
     viewModel: TaskViewModel,
-    taskId: Int = 0,
+    taskId: String? = null,
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -35,269 +38,169 @@ fun AddEditTaskScreen(
     var showDatePicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(taskId) {
-        if (taskId != 0) {
+        if (!taskId.isNullOrEmpty()) {
             viewModel.onEvent(TaskEvent.LoadTask(taskId))
+        } else {
+            viewModel.onEvent(TaskEvent.ClearForm)
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        SpaceBlack,
-                        SpaceGray.copy(alpha = 0.3f)
-                    )
-                )
-            )
-    ) {
-        // Top App Bar
-        TopAppBar(
-            title = {
-                Text(
-                    text = if (isEditing) "Edit Task" else "Add Task",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-            },
-            navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "Back"
-                    )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(text = if (isEditing) "Edit Task" else "Add Task") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            viewModel.onEvent(TaskEvent.SaveTask)
+                            onNavigateBack()
+                        },
+                        enabled = uiState.title.isNotBlank()
+                    ) {
+                        Icon(Icons.Default.Save, contentDescription = "Save Task")
+                    }
                 }
-            },
-            actions = {
-                TextButton(
-                    onClick = {
-                        viewModel.onEvent(TaskEvent.SaveTask)
-                        onNavigateBack()
-                    },
-                    enabled = uiState.title.isNotBlank()
-                ) {
-                    Text(
-                        text = if (isEditing) "Update" else "Save",
-                        color = if (uiState.title.isNotBlank())
-                            SpaceBlueLight else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = SpaceBlack.copy(alpha = 0.95f)
             )
-        )
-
-        // Form Content
+        }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(innerPadding)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(SpaceGray, SpaceBlack)
+                    )
+                )
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Title Input
-            Card(
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = uiState.title,
+                onValueChange = { viewModel.onEvent(TaskEvent.UpdateTitle(it)) },
+                label = { Text("Task Title") },
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = SpaceBlueLight,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = uiState.description,
+                onValueChange = { viewModel.onEvent(TaskEvent.UpdateDescription(it)) },
+                label = { Text("Description") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 120.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = SpaceBlueLight,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
+                Text(
+                    text = "Due Date",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                TextButton(onClick = { showDatePicker = true }) {
                     Text(
-                        text = "Task Title",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = uiState.title,
-                        onValueChange = { viewModel.onEvent(TaskEvent.UpdateTitle(it)) },
-                        placeholder = { Text("Enter task title...") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = SpaceBlueLight,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                        )
+                        text = dateFormatter.format(uiState.date),
+                        color = SpaceBlueLight,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
 
-            // Description Input
-            Card(
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Priority",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.align(Alignment.Start)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            LazyRow(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Description",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = uiState.description,
-                        onValueChange = { viewModel.onEvent(TaskEvent.UpdateDescription(it)) },
-                        placeholder = { Text("Enter task description...") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 3,
-                        maxLines = 5,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = SpaceBlueLight,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                        )
+                items(TaskPriority.values()) { priority ->
+                    PriorityChip(
+                        priority = priority,
+                        isSelected = uiState.priority == priority,
+                        onClick = { viewModel.onEvent(TaskEvent.UpdatePriority(priority)) }
                     )
                 }
             }
 
-            // Date Selection
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Due Date",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedCard(
-                        onClick = { showDatePicker = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.outlinedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.DateRange,
-                                    contentDescription = "Date",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = dateFormatter.format(uiState.date),
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowRight,
-                                contentDescription = "Select Date",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Priority Selection
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Priority",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        TaskPriority.values().forEach { priority ->
-                            PriorityChip(
-                                priority = priority,
-                                isSelected = uiState.priority == priority,
-                                onClick = { viewModel.onEvent(TaskEvent.UpdatePriority(priority)) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Bottom Spacing
             Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = {
+                    viewModel.onEvent(TaskEvent.SaveTask)
+                    onNavigateBack()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                enabled = uiState.title.isNotBlank()
+            ) {
+                Text(text = if (isEditing) "Update Task" else "Add Task")
+            }
         }
     }
 
-    // Date Picker Dialog
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = uiState.date.time
         )
-
-        DatePickerDialog(
+        AlertDialog(
             onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            viewModel.onEvent(TaskEvent.UpdateDate(Date(millis)))
+            content = {
+                DatePicker(state = datePickerState)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(
+                        onClick = {
+                            datePickerState.selectedDateMillis?.let { millis ->
+                                viewModel.onEvent(TaskEvent.UpdateDate(Date(millis)))
+                            }
+                            showDatePicker = false
                         }
-                        showDatePicker = false
-                    }
-                ) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showDatePicker = false }
-                ) {
-                    Text("Cancel")
+                    ) { Text("OK") }
                 }
             }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+        )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PriorityChip(
     priority: TaskPriority,
@@ -320,8 +223,8 @@ fun PriorityChip(
         colors = FilterChipDefaults.filterChipColors(
             selectedContainerColor = priority.color.copy(alpha = 0.2f),
             selectedLabelColor = priority.color,
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            labelColor = MaterialTheme.colorScheme.onSurface
         )
-        // Remove border property - it might not be supported in your version
     )
 }

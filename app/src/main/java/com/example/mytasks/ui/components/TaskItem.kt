@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mytasks.data.entity.Task
 import com.example.mytasks.data.entity.TaskPriority
+import com.example.mytasks.ui.theme.color
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -31,124 +32,90 @@ import java.util.*
 @Composable
 fun TaskItem(
     task: Task,
-    onToggleComplete: (Int, Boolean) -> Unit,
-    onEdit: (Int) -> Unit,
-    onDelete: (Task) -> Unit,
-    modifier: Modifier = Modifier
+    onToggleComplete: (String, Boolean) -> Unit,
+    onEdit: (String) -> Unit,
+    onDelete: (Task) -> Unit
 ) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
     val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
-    val alpha by animateFloatAsState(
-        targetValue = if (task.isCompleted) 0.6f else 1f,
-        label = "task_alpha"
-    )
+    val alpha = animateFloatAsState(targetValue = if (task.isCompleted) 0.6f else 1.0f)
+    val textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
 
     Card(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .alpha(alpha)
-            .clickable { onEdit(task.id) },
+            .padding(vertical = 4.dp)
+            .clickable(onClick = { onEdit(task.idString) })
+            .alpha(alpha.value),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Completion Checkbox
-            Checkbox(
-                checked = task.isCompleted,
-                onCheckedChange = { isChecked ->
-                    onToggleComplete(task.id, isChecked)
-                },
-                colors = CheckboxDefaults.colors(
-                    checkedColor = MaterialTheme.colorScheme.primary
-                )
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Task Content
-            Column(
-                modifier = Modifier.weight(1f)
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Title
-                Text(
-                    text = task.title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                Checkbox(
+                    checked = task.isCompleted,
+                    onCheckedChange = { onToggleComplete(task.idString, it) },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = task.priority.color,
+                        checkmarkColor = Color.White
+                    )
                 )
 
-                // Description
-                if (task.description.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(
-                        text = task.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
+                        text = task.title,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            textDecoration = textDecoration
+                        ),
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Date and Priority Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Date
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = "Date",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                    if (task.description.isNotBlank()) {
                         Text(
-                            text = dateFormatter.format(task.date),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = task.description,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                textDecoration = textDecoration
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                     }
-
-                    // Priority Badge
-                    PriorityBadge(
-                        priority = task.priority,
-                        modifier = Modifier
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Due: ${dateFormatter.format(task.date)}",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            textDecoration = textDecoration
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-            // Action Buttons
-            Column {
-                IconButton(
-                    onClick = { onEdit(task.id) }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit Task",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                PriorityBadge(priority = task.priority)
                 IconButton(
                     onClick = { showDeleteDialog = true }
                 ) {
@@ -162,7 +129,7 @@ fun TaskItem(
         }
     }
 
-    // Delete Confirmation Dialog
+    // Delete confirmation dialog
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -195,7 +162,7 @@ fun TaskItem(
 
 @Composable
 fun PriorityBadge(
-    priority: com.example.mytasks.data.entity.TaskPriority,
+    priority: TaskPriority,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -204,13 +171,6 @@ fun PriorityBadge(
             .background(priority.color.copy(alpha = 0.2f))
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        Text(
-            text = priority.displayName,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Medium
-            ),
-            color = priority.color
-        )
+
     }
 }

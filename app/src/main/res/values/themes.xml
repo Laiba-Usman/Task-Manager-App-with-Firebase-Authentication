@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.MyTasks" parent="android:Theme.Material.NoActionBar">
-        <!-- Only use attributes that exist in basic Material theme -->
         <item name="android:colorPrimary">@color/space_blue_light</item>
         <item name="android:colorPrimaryDark">@color/space_blue</item>
         <item name="android:colorAccent">@color/space_purple_light</item>
@@ -9,5 +8,11 @@
         <item name="android:statusBarColor">@color/space_black</item>
         <item name="android:navigationBarColor">@color/space_black</item>
         <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="Theme.MyTasks.SplashScreen" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/space_black</item>
+        <item name="windowSplashScreenAnimationDuration">500</item>
+        <item name="postSplashScreenTheme">@style/Theme.MyTasks</item>
     </style>
 </resources>

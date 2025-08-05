@@ -1,6 +1,7 @@
 package com.example.mytasks
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,6 +15,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
 import com.example.mytasks.navigation.NavGraph
 import com.example.mytasks.ui.theme.MyTasksTheme
+import com.google.firebase.FirebaseApp
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -23,6 +25,15 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
 
         super.onCreate(savedInstanceState)
+
+        try {
+            // Initialize Firebase
+            FirebaseApp.initializeApp(this)
+            Log.d("MainActivity", "Firebase initialized successfully")
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Firebase initialization failed", e)
+        }
+
         enableEdgeToEdge()
 
         setContent {

@@ -1,46 +1,53 @@
 package com.example.mytasks.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mytasks.data.entity.Task
 import com.example.mytasks.data.entity.TaskPriority
-import com.example.mytasks.repository.TaskRepository
+import com.example.mytasks.repository.FirebaseTaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
-
 @HiltViewModel
 class TaskViewModel @Inject constructor(
-    private val repository: TaskRepository
+    private val repository: FirebaseTaskRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TaskUiState())
     val uiState: StateFlow<TaskUiState> = _uiState.asStateFlow()
 
     val allTasks = repository.getAllTasks()
+        .catch { e ->
+            Log.e("TaskViewModel", "Error loading tasks", e)
+            emit(emptyList())
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    val activeTasks = repository.getActiveTasks()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    // Filtering is now done in-memory since Firebase returns all tasks for the user
+    val activeTasks = allTasks.map { tasks ->
+        tasks.filter { !it.isCompleted }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
-    val completedTasks = repository.getCompletedTasks()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    val completedTasks = allTasks.map { tasks ->
+        tasks.filter { it.isCompleted }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
-    val activeTasksCount = repository.getActiveTasksCount()
+    val activeTasksCount = activeTasks.map { it.size }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -57,76 +64,115 @@ class TaskViewModel @Inject constructor(
             is TaskEvent.UpdateDescription -> updateDescription(event.description)
             is TaskEvent.UpdateDate -> updateDate(event.date)
             is TaskEvent.UpdatePriority -> updatePriority(event.priority)
-            is TaskEvent.ClearForm -> clearForm()
-            is TaskEvent.DeleteCompletedTasks -> deleteCompletedTasks()
             is TaskEvent.SetFilter -> setFilter(event.filter)
+            TaskEvent.ClearForm -> clearForm()
+            TaskEvent.ClearCompleted -> clearCompletedTasks()
         }
     }
 
-    private fun loadTask(taskId: Int) {
+    private fun loadTask(taskId: String?) {
+        if (taskId.isNullOrBlank()) {
+            clearForm()
+            return
+        }
+
         viewModelScope.launch {
-            val task = repository.getTaskById(taskId)
-            task?.let {
-                _uiState.value = _uiState.value.copy(
-                    currentTask = it,
-                    title = it.title,
-                    description = it.description,
-                    date = it.date,
-                    priority = it.priority,
-                    isEditing = true
-                )
+            try {
+                val task = repository.getTaskById(taskId)
+                if (task != null) {
+                    _uiState.value = _uiState.value.copy(
+                        currentTask = task,
+                        title = task.title,
+                        description = task.description,
+                        date = task.date,
+                        priority = task.priority,
+                        isEditing = true
+                    )
+                    Log.d("TaskViewModel", "Task loaded successfully: ${task.title}")
+                } else {
+                    Log.w("TaskViewModel", "Task not found: $taskId")
+                    clearForm()
+                }
+            } catch (e: Exception) {
+                Log.e("TaskViewModel", "Error loading task", e)
+                clearForm()
             }
         }
     }
 
     private fun saveTask() {
-        val state = _uiState.value
-        if (state.title.isBlank()) return
+        val currentState = _uiState.value
+        if (currentState.title.isBlank()) {
+            Log.w("TaskViewModel", "Cannot save task with empty title")
+            return
+        }
 
         viewModelScope.launch {
-            val task = if (state.isEditing) {
-                state.currentTask?.copy(
-                    title = state.title,
-                    description = state.description,
-                    date = state.date,
-                    priority = state.priority,
-                    updatedAt = Date()
-                )
-            } else {
-                Task(
-                    title = state.title,
-                    description = state.description,
-                    date = state.date,
-                    priority = state.priority
-                )
-            }
-
-            task?.let {
-                if (state.isEditing) {
-                    repository.updateTask(it)
+            try {
+                if (currentState.isEditing && currentState.currentTask != null) {
+                    val updatedTask = currentState.currentTask.copy(
+                        title = currentState.title.trim(),
+                        description = currentState.description.trim(),
+                        date = currentState.date,
+                        priority = currentState.priority,
+                        updatedAt = Date()
+                    )
+                    repository.updateTask(updatedTask)
+                    Log.d("TaskViewModel", "Task updated successfully")
                 } else {
-                    repository.insertTask(it)
+                    val newTask = Task(
+                        idString = "", // Firebase will generate the ID
+                        title = currentState.title.trim(),
+                        description = currentState.description.trim(),
+                        date = currentState.date,
+                        priority = currentState.priority,
+                        isCompleted = false,
+                        createdAt = Date(),
+                        updatedAt = Date()
+                    )
+                    repository.insertTask(newTask)
+                    Log.d("TaskViewModel", "Task created successfully")
                 }
                 clearForm()
+            } catch (e: Exception) {
+                Log.e("TaskViewModel", "Error saving task", e)
             }
         }
     }
 
     private fun deleteTask(task: Task) {
         viewModelScope.launch {
-            repository.deleteTask(task)
+            try {
+                repository.deleteTask(task)
+                Log.d("TaskViewModel", "Task deleted successfully")
+            } catch (e: Exception) {
+                Log.e("TaskViewModel", "Error deleting task", e)
+            }
         }
     }
 
-    private fun toggleTaskCompletion(taskId: Int, isCompleted: Boolean) {
+    private fun toggleTaskCompletion(taskId: String, isCompleted: Boolean) {
         viewModelScope.launch {
-            repository.updateTaskCompletion(taskId, isCompleted)
+            try {
+                repository.updateTaskCompletion(taskId, isCompleted)
+                Log.d("TaskViewModel", "Task completion toggled: $isCompleted")
+            } catch (e: Exception) {
+                Log.e("TaskViewModel", "Error toggling task completion", e)
+            }
         }
     }
 
-    private fun deleteCompletedTasks() {
+    private fun clearCompletedTasks() {
         viewModelScope.launch {
-            repository.deleteCompletedTasks()
+            try {
+                val completed = completedTasks.value
+                completed.forEach { task ->
+                    repository.deleteTask(task)
+                }
+                Log.d("TaskViewModel", "Cleared ${completed.size} completed tasks")
+            } catch (e: Exception) {
+                Log.e("TaskViewModel", "Error clearing completed tasks", e)
+            }
         }
     }
 
@@ -152,6 +198,7 @@ class TaskViewModel @Inject constructor(
 
     private fun clearForm() {
         _uiState.value = TaskUiState()
+        Log.d("TaskViewModel", "Form cleared")
     }
 }
 
@@ -166,21 +213,19 @@ data class TaskUiState(
 )
 
 sealed class TaskEvent {
-    data class LoadTask(val taskId: Int) : TaskEvent()
+    data class LoadTask(val taskId: String) : TaskEvent()
     object SaveTask : TaskEvent()
     data class DeleteTask(val task: Task) : TaskEvent()
-    data class ToggleTaskCompletion(val taskId: Int, val isCompleted: Boolean) : TaskEvent()
+    data class ToggleTaskCompletion(val taskId: String, val isCompleted: Boolean) : TaskEvent()
     data class UpdateTitle(val title: String) : TaskEvent()
     data class UpdateDescription(val description: String) : TaskEvent()
     data class UpdateDate(val date: Date) : TaskEvent()
     data class UpdatePriority(val priority: TaskPriority) : TaskEvent()
-    object ClearForm : TaskEvent()
-    object DeleteCompletedTasks : TaskEvent()
     data class SetFilter(val filter: TaskFilter) : TaskEvent()
+    object ClearForm : TaskEvent()
+    object ClearCompleted : TaskEvent()
 }
 
-enum class TaskFilter(val displayName: String) {
-    ALL("All Tasks"),
-    ACTIVE("Active"),
-    COMPLETED("Completed")
+enum class TaskFilter {
+    ALL, ACTIVE, COMPLETED
 }
