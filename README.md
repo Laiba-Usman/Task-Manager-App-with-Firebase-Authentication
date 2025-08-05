@@ -1,12 +1,12 @@
-# 🌌 Taskify – Your Personal Space for Tasks  
-**"Keep calm and check it off – every task counts!"**
+# 🔐 Taskify with Firebase Authentication  
+**"Secure your tasks, secure your flow – powered by Firebase!"**
 
 ---
 
-## 🚀 What is Taskify?
+## 🚀 What is Taskify with Firebase?
 
-Taskify is a modern Android app designed with **Kotlin**, built using **Jetpack Compose**, **Room Database**, and **MVVM architecture**.  
-With its sleek, galaxy-themed UI, this app makes managing daily tasks both aesthetic and efficient — even when you’re offline.
+Taskify has been enhanced with **Firebase Authentication** and **Firebase Realtime Database** to provide secure, real-time user login and registration.  
+This version builds upon the Taskify UI/UX while introducing a robust authentication layer — all with **Jetpack Compose** and **MVVM architecture**.
 
 ---
 
@@ -23,14 +23,15 @@ With its sleek, galaxy-themed UI, this app makes managing daily tasks both aesth
 
 ## ✍️ Core Features
 
-| 🌟 Feature        | 📝 Description                                           |
-|------------------|----------------------------------------------------------|
-| ➕ Add Task       | Add tasks with title, detail, deadline, and priority     |
-| 📃 Task Overview | See your tasks neatly listed using `LazyColumn`          |
-| 🛠️ Edit Task     | Update tasks anytime with just a few taps                |
-| 🗑️ Remove Task   | Delete tasks via swipe or delete icon                    |
-| 🎯 Set Priorities| Color-coded labels make high-priority tasks pop!         |
-| ✅ Mark as Done   | Toggle completion status in real time                   |
+| 🔐 Feature             | 📝 Description                                                                 |
+|------------------------|--------------------------------------------------------------------------------|
+| 🧾 Register New User    | Email/password registration via Firebase Auth                                  |
+| 💾 Store Profile Data   | Saves name & email to Firebase Realtime Database                               |
+| 🔑 Login Existing User  | Validates user via Firebase Auth, fetches profile info                         |
+| 🛠️ Form Validation     | Validates fields, shows loading & error states                                 |
+| 🔄 Integrated Flow      | Navigates from Login/Register → Task Screen on success                         |
+| 📱 Jetpack Compose UI   | Intuitive, modern design with clean input fields                               |
+| 🚦 Navigation           | Navigation between screens using Compose Navigation                            |
 
 ---
 
@@ -38,11 +39,26 @@ With its sleek, galaxy-themed UI, this app makes managing daily tasks both aesth
 
 | Layer              | Tools Used                                |
 |--------------------|--------------------------------------------|
-| 🎨 UI Design       | Jetpack Compose with a cosmic theme        |
-| 💾 Local Storage   | Room Database (SQLite)                     |
-| 🧠 Architecture    | MVVM (Model-View-ViewModel)                |
-| 🔄 State Mgmt      | LiveData + Compose State APIs              |
-| 🚦 Navigation      | Jetpack Navigation for Compose             |
+| 🎨 UI Design       | Jetpack Compose                            |
+| 🧠 Architecture    | MVVM + ViewModel + StateFlow               |
+| 🔐 Auth System     | Firebase Authentication                    |
+| ☁️ Database        | Firebase Realtime Database                 |
+| 🔄 Navigation      | Jetpack Navigation for Compose             |
+
+---
+## 📸 App Screenshots
+
+| Login Screen | Register Screen |
+|--------------|-----------------|
+| ![Login](login.png.jpg) | ![Register](create_Account.png.jpg) |
+
+| Add Task | View Tasks |
+|----------|------------|
+| ![Add Task](AddTask.png.jpg) | ![Task List](Task_Screen.png.jpg) |
+
+| Completed Task | Clear Tasks |
+|----------------|-------------|
+| ![Completed](Task_completion.png.jpg) | ![Clear](clear_tasks.png.jpg) |
 
 ---
 
@@ -60,16 +76,14 @@ With its sleek, galaxy-themed UI, this app makes managing daily tasks both aesth
 
 | 📂 File               | 🧩 Responsibility                             |
 |----------------------|----------------------------------------------|
-| `Task.kt`            | Entity model class for tasks                 |
-| `TaskDao.kt`         | Data Access Object (DAO) interface           |
-| `TaskDatabase.kt`    | Room DB setup & instance handling            |
-| `TaskRepository.kt`  | Abstraction layer over DAO                   |
-| `TaskViewModel.kt`   | Business logic + LiveData exposure           |
-| `MainActivity.kt`    | App launch entry point                       |
-| `NavGraph.kt`        | Navigation graph with Compose destinations   |
-| `TaskListScreen.kt`  | Displays list of tasks                       |
-| `AddEditTaskScreen.kt`| UI for adding/editing a task               |
-| `TaskItem.kt`        | Reusable UI card for each task               |
+| `LoginScreen.kt`     | UI + logic for Firebase login                |
+| `RegisterScreen.kt`  | UI + logic for registration + DB write       |
+| `User.kt`            | Data class for user profile                  |
+| `AuthViewModel.kt`   | Handles auth logic with Firebase             |
+| `FirebaseRepository.kt` | Reusable functions for login/register     |
+| `MainActivity.kt`    | App launch point                             |
+| `NavGraph.kt`        | Navigation setup between screens             |
+| `TaskListScreen.kt`  | Main task dashboard after login              |
 
 ---
 
